@@ -1,3 +1,4 @@
+from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, f1_score, recall_score, roc_curve, auc
 from sklearn.feature_selection import RFECV
 from sklearn.feature_selection import RFE
 from sklearn.ensemble import RandomForestClassifier
@@ -24,6 +25,28 @@ def writePickle(path, object):
     pickle_out = open(path, "wb")
     pickle.dump(object, pickle_out)
     pickle_out.close()
+    
+def validate_classifier(classifier, X_validate, y_validate, selected_features = []):
+    if str(type(classifier)) == "<class 'keras.engine.sequential.Sequential'>":
+        prob_predictions = [x[0] for x in list(dnn.predict(X_validate))]
+    else:
+        prob_predictions = classifier.predict_proba(X_validate[selected_features].values)[:, 1]
+    
+    if str(type(classifier)) == "<class 'keras.engine.sequential.Sequential'>":
+        class_predictions = [x[0] for x in list(np.where(dnn.predict(X_validate) >= 0.5, 1, 0))]
+    else:
+        class_predictions = classifier.predict(X_validate[selected_features].values)
+    
+    # print("=== Validation ROC AUC ===")
+    # print(roc_auc_score(y_validate, prob_predictions))
+    # print("=== Validation Precision ===")
+    # print(precision_score(y_validate, class_predictions))
+    # print("=== Validation Recall ===")
+    # print(recall_score(y_validate, class_predictions))
+    # print("=== Validation Accuracy ===")
+    # print(accuracy_score(y_validate, class_predictions))
+    
+    return roc_auc_score(y_validate, prob_predictions)
 
 def correlationFiltering(X_train, threshold = 0.75, figsize = 10):
     
@@ -58,7 +81,6 @@ def correlationFiltering(X_train, threshold = 0.75, figsize = 10):
 def RFECV_ranking(
                     X_train, y_train, X_validate, y_validate, 
                     metrics = ["roc_auc", "precision", "recall"], 
-                    folds = 3,
                     step = 1,
                     estimator = RandomForestClassifier(n_estimators=500, random_state=1977),
                     write_model = True
@@ -101,7 +123,7 @@ def RFECV_ranking(
         
         importantFeatures[metric] = features
         
-    return importantFeatures
+    return (rfecv, importantFeatures)
 
 def applyFeatureSelection(
         X_train, y_train, X_validate, y_validate, X_test, y_test,
@@ -110,19 +132,21 @@ def applyFeatureSelection(
         correlation_threshold = 0.75,
         step = 1,
         figsize = 10,
-        write_model = True
+        write_model = True,
+        correlation_filtering = True
     ):
     
     if X_train is not None:
-        removeFirst = correlationFiltering(X_train, threshold = correlation_threshold, figsize = figsize)
-        print("=== Highly correlated variables to drop ===")
-        print(removeFirst)
-        X_train = dropColumns(data = X_train, columns = removeFirst)
-        X_validate = dropColumns(data = X_validate, columns = removeFirst)
-        X_test = dropColumns(data = X_test, columns = removeFirst)
-        print("=== Columns after removal ===")
-        print(list(X_train.columns))
-        importantFeatures = RFECV_ranking(X_train, y_train, X_validate, y_validate, 
+        if correlation_filtering:
+            removeFirst = correlationFiltering(X_train, threshold = correlation_threshold, figsize = figsize)
+            print("=== Highly correlated variables to drop ===")
+            print(removeFirst)
+            X_train = dropColumns(data = X_train, columns = removeFirst)
+            X_validate = dropColumns(data = X_validate, columns = removeFirst)
+            X_test = dropColumns(data = X_test, columns = removeFirst)
+            print("=== Columns after removal ===")
+            print(list(X_train.columns))
+        model, importantFeatures = RFECV_ranking(X_train, y_train, X_validate, y_validate, 
                                           metrics = metrics, estimator = estimator, 
                                           step = step, write_model = write_model)
         print("=== Most important features ===")
@@ -130,4 +154,4 @@ def applyFeatureSelection(
     else:
         print("No data to select from")
     
-    return importantFeatures
+    return model, importantFeatures

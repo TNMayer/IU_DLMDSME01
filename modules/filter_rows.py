@@ -44,9 +44,9 @@ def getLowerFailedPSP(row, woUpper, inFrame):
         returnDummy = []
         for psp in sorted(inFrame["PSP"].unique()):
             if any(psp in s for s in failedPSP):
-                returnDummy.append(1)
+                returnDummy.append(int(1))
             else:
-                returnDummy.append(0)
+                returnDummy.append(int(0))
         return [1, failedPSP, returnDummy[0], returnDummy[1], returnDummy[2], returnDummy[3]]
     else:
         return [0, [], 0, 0, 0, 0]
