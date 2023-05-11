@@ -51,6 +51,50 @@ def getLowerFailedPSP(row, woUpper, inFrame):
     else:
         return [0, [], 0, 0, 0, 0]
 
+def clean_up_filtered(data):
+    import numpy as np
+    import pandas as pd
+    
+    out = data.copy()
+    duplicated = out.duplicated(subset = ["tmsp", "country", "amount"])
+    out["duplicated"] = duplicated.astype(int)
+    timestamps = list(out[out["duplicated"] == 1].tmsp)
+    countries = list(out[out["duplicated"] == 1].country)
+    amounts = list(out[out["duplicated"] == 1].amount)
+
+    orig_len = len(out)
+
+    i = 0
+    exclusions = 0
+    for tmsp in timestamps:
+        subset = out[(out.tmsp == tmsp) & 
+                       (out.country == countries[i]) & 
+                       (out.amount == amounts[i])
+                      ]
+        if len(subset) >= 2:
+            subset = subset.copy()
+            if subset.success.sum() > 0:
+                subset["duplicated"] = np.where(subset.success == 1, 1, 0)
+            else:
+                subset["duplicated"] = np.where(subset.index == subset.index.min(), 1, 0)
+            subset["failPrevious"] = np.where(subset["duplicated"] == 1, 1, subset["failPrevious"])
+            unique_psp = list(subset[subset["duplicated"] == 0].PSP.unique())
+            for psp in unique_psp:
+                subset["failed_" + psp] = np.where(subset["duplicated"] == 1, 1, subset["failed_" + psp])
+            replacement = subset[subset["duplicated"] == 1]
+            idx = replacement.index[0]
+            out.loc[idx, :] = replacement.iloc[0, :]
+            excluded = list(subset[subset["duplicated"] == 0].index)
+            # print(excluded)
+            exclusions += len(excluded)
+            out = out[~out.index.isin(excluded)]
+
+        i += 1
+    
+    print("=== After cleaning up filtered data: " + str(orig_len - len(out)) + " rows removed ===")
+    
+    return out
+
 def selectRows(data):
     import pandas as pd
     import numpy as np
@@ -87,6 +131,8 @@ def selectRows(data):
         })
     )[out["numUpper"] == 0]
     out = out.drop(columns=['failedPSP', 'lower', 'upper', 'numUpper'])
+    out = clean_up_filtered(out)
+    out = out.drop(columns=['duplicated'])
     
     print("= End Time: " + str(time.time() - start_time) + " seconds")
     
