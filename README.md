@@ -11,4 +11,4 @@ This is done using:
     conda activate kfex
 ```
 
-Most of the plots in the data understanding phase are created using ```plotly```. Those plots do not get displayed correctly in GitHub, because only static content is supported. However, if you wish to have an interactive view of the provided notebooks you can do that via [nbviewer.org](https://nbviewer.org). For example if you want a dynamic view of the file ```02_Data_Understanding.ipynb``` you can achieve it via the following [URL](https://nbviewer.org/github/TNMayer/IU_DLMDSME01/blob/main/02_Data_Understanding.ipynb)
+Most of the plots in the data understanding phase are created using ```plotly```. Those plots are not displayed in GitHub, because only static content is supported. However, if you wish to have an interactive view of the provided notebooks you can do that via [nbviewer.org](https://nbviewer.org). For example if you want a dynamic view of the file ```02_Data_Understanding.ipynb``` you can achieve it via the following [URL](https://nbviewer.org/github/TNMayer/IU_DLMDSME01/blob/main/02_Data_Understanding.ipynb)
