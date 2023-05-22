@@ -48,6 +48,17 @@ def validate_classifier(classifier, X_validate, y_validate, selected_features = 
     
     return roc_auc_score(y_validate, prob_predictions)
 
+def keepAllPSP(features):
+    psps = ['PSP_Moneycard', 'PSP_Simplecard', 'PSP_UK_Card']
+    diff = list(set(psps) - set(features))
+    
+    print("=== Features to add: " + str(diff) + " ===")
+    
+    for feature in diff:
+        features.append(feature)
+    
+    return features
+
 def correlationFiltering(X_train, threshold = 0.75, figsize = 10):
     
     plt.figure(figsize=(figsize, figsize))

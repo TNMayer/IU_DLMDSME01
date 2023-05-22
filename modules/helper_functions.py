@@ -26,6 +26,15 @@ def get_amountgroups(data, bins = [0, 99, 175, 247, 330, 8000]):
     
     return out
 
+def get_daytime(data):
+    out = data.copy()
+    
+    out['daytime'] = np.where((out['time'] >= '01:00') & (out['time'] <= '06:00'), 'night', 
+                        np.where((out['time'] > '06:00') & (out['time'] <= '12:00'), 'morning',
+                        np.where((out['time'] > '12:00') & (out['time'] <= '18:00'), 'afternoon', 'evening')))
+    
+    return out
+
 def loadPickle(path):
     out = pickle.load(open(path, 'rb'))
     return out
