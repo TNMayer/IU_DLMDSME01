@@ -7,6 +7,27 @@ from jenkspy import JenksNaturalBreaks
 import sqlite3
 from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, f1_score, recall_score, roc_curve, auc
 
+def swap_rows(df, row1, row2):
+    df.iloc[row1], df.iloc[row2] =  df.iloc[row2].copy(), df.iloc[row1].copy()
+    return df
+
+def find_diff(df_a, df_b, column):
+    listA = list(df_a[column])
+    listB = list(df_b[column])
+    # index variable
+    idx = 0
+
+    # Result list
+    res = []
+
+    # With iteration
+    for i in listA:
+        if i != listB[idx]:
+            res.append(idx)
+        idx = idx + 1
+    
+    return res
+
 def convert_types(X, y):
     out_X = X.copy()
     out_y = y.copy()
@@ -169,22 +190,57 @@ def dropColumns(data, columns = ['tmsp', 'tmsp_hour', 'daytime', 'time', 'failed
     
     return out
 
-def validate_classifier(classifier, X_validate, y_validate, selected_features = []):
+def find_threshold(X_test, y_test, model, features, range_min = 30, range_max = 70, precision_weight = 2, recall_weight = 1):
+    thresholds = np.array(range(range_min, (range_max + 1)))/100
+    optimized = 0
+    precision_max = 0
+    recall_max = 0
+    optim_threshold = 0
+    for threshold in thresholds:
+        performance = validate_classifier(model, X_test, y_test, selected_features = features, threshold = threshold, verbose = 0)
+        precision = performance['precision']
+        recall = performance['recall']
+        if ((precision_weight*precision + recall_weight*recall)/(precision_weight + recall_weight)) > optimized:
+            precision_max = precision
+            recall_max = recall
+            optim_threshold = threshold
+            optimized = (precision_weight*precision + recall_weight*recall)/(precision_weight + recall_weight)
+    
+    return (optim_threshold, precision_max, recall_max)
+
+def validate_classifier(classifier, X_validate, y_validate, selected_features = [], threshold = 0.5, verbose = 1):
     if str(type(classifier)) == "<class 'keras.engine.sequential.Sequential'>":
         prob_predictions = [x[0] for x in list(dnn.predict(X_validate))]
     else:
         prob_predictions = classifier.predict_proba(X_validate[selected_features])[:, 1]
     
     if str(type(classifier)) == "<class 'keras.engine.sequential.Sequential'>":
-        class_predictions = [x[0] for x in list(np.where(dnn.predict(X_validate) >= 0.5, 1, 0))]
+        class_predictions = [x[0] for x in list(np.where(dnn.predict(X_validate) >= threshold, 1, 0))]
     else:
-        class_predictions = classifier.predict(X_validate[selected_features])
+        class_predictions = list(np.where(classifier.predict_proba(X_validate[selected_features])[:, 1] >= threshold, 1, 0))
     
-    print("=== Validation ROC AUC ===")
-    print(roc_auc_score(y_validate, prob_predictions))
-    print("=== Validation Precision ===")
-    print(precision_score(y_validate, class_predictions))
-    print("=== Validation Recall ===")
-    print(recall_score(y_validate, class_predictions))
-    print("=== Validation Accuracy ===")
-    print(accuracy_score(y_validate, class_predictions))
+    if verbose > 0:
+        print("=== Validation ROC AUC ===")
+        print(roc_auc_score(y_validate, prob_predictions))
+        print("=== Validation Precision ===")
+        print(precision_score(y_validate, class_predictions, zero_division = 0))
+        print("=== Validation Recall ===")
+        print(recall_score(y_validate, class_predictions))
+        print("=== Validation Accuracy ===")
+        print(accuracy_score(y_validate, class_predictions))
+    
+    return {
+                "roc_auc": roc_auc_score(y_validate, prob_predictions),
+                "precision": precision_score(y_validate, class_predictions, zero_division = 0),
+                "recall": recall_score(y_validate, class_predictions),
+                "accuracy": accuracy_score(y_validate, class_predictions)
+           }
+
+def formatData(data, columns = ['PSP', 'card', 'month', 'weekday', 'country']):
+    out = data.copy()
+    
+    out = pd.get_dummies(out, columns=columns, drop_first=True)
+    # print("=== Number of missing values ===")
+    # print(out.isna().sum().sum())
+    
+    return out

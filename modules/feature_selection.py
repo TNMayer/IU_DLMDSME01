@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
-import pickle
 
 def dropColumns(data, columns = ['tmsp', 'tmsp_hour', 'daytime', 'time', 'failedPSP', 'amountgroup', 'amountgroup_word', 'lower', 'upper', 'numUpper']):
     out = data.copy()
@@ -16,15 +15,6 @@ def dropColumns(data, columns = ['tmsp', 'tmsp_hour', 'daytime', 'time', 'failed
         out = out.drop(columns, axis = 1)
     
     return out
-
-def loadPickle(path):
-    out = pickle.load(open(path, 'rb'))
-    return out
-
-def writePickle(path, object):
-    pickle_out = open(path, "wb")
-    pickle.dump(object, pickle_out)
-    pickle_out.close()
     
 def validate_classifier(classifier, X_validate, y_validate, selected_features = []):
     if str(type(classifier)) == "<class 'keras.engine.sequential.Sequential'>":
@@ -36,15 +26,6 @@ def validate_classifier(classifier, X_validate, y_validate, selected_features = 
         class_predictions = [x[0] for x in list(np.where(dnn.predict(X_validate) >= 0.5, 1, 0))]
     else:
         class_predictions = classifier.predict(X_validate[selected_features].values)
-    
-    # print("=== Validation ROC AUC ===")
-    # print(roc_auc_score(y_validate, prob_predictions))
-    # print("=== Validation Precision ===")
-    # print(precision_score(y_validate, class_predictions))
-    # print("=== Validation Recall ===")
-    # print(recall_score(y_validate, class_predictions))
-    # print("=== Validation Accuracy ===")
-    # print(accuracy_score(y_validate, class_predictions))
     
     return roc_auc_score(y_validate, prob_predictions)
 
@@ -128,7 +109,7 @@ def RFECV_ranking(
         print(rfecv.cv_results_['mean_test_score'].max())
         
         if write_model:
-            writePickle(path = "./data/rfecv_" + metric + ".pkl", object = rfecv)
+            hf.writePickle(path = "./data/rfecv_" + metric + ".pkl", object = rfecv)
             print("=== rfecv_" + metric + " saved to pickle file ===")
             print("")
         
