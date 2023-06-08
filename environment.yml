@@ -1,4 +1,4 @@
-name: kfex
+name: model_engineering
 channels:
   - conda-forge
   - defaults
@@ -322,4 +322,3 @@ dependencies:
     - torchvision==0.13.1
     - tqdm==4.64.1
     - urllib3==1.26.6
-prefix: C:\Users\thmay\.conda\envs\kfex
